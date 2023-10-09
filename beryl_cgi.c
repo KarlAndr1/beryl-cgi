@@ -184,13 +184,26 @@ DEF_FN(submit, 1) {
 	return BERYL_NULL;
 }
 
-DEF_FN(form, 3) {
+DEF_FN(form, -4) {
+	if(n_args % 2 != 1)
+		return BERYL_ERR("'form' only takes an odd number of arguments");
+	
 	(void) n_args;
 	fputs("<form action=\"", stdout);
 	beryl_print_i_val(stdout, args[0]);
 	fputs("\" method=\"", stdout);
 	beryl_print_i_val(stdout, args[1]);
-	fputs("\">", stdout);
+	fputs("\" ", stdout);
+	
+	for(i_size i = 2; i < n_args - 1; i += 2) {
+		beryl_print_i_val(stdout, args[i]);
+		fputs("=\"", stdout);
+		assert(i + 1 < n_args - 1);
+		beryl_print_i_val(stdout, args[i+1]);
+		fputs("\" ", stdout);
+	}
+	
+	fputs(">", stdout);
 	
 	struct i_val err;
 	void *prev_scope = beryl_new_scope();
@@ -200,7 +213,7 @@ DEF_FN(form, 3) {
 	REQUIRE(beryl_bind_name("select", sizeof("select") - 1, BERYL_EXT_FN(&select_fn), true));
 	REQUIRE(beryl_bind_name("submit", sizeof("submit") - 1, BERYL_EXT_FN(&submit_fn), true));
 	
-	struct i_val res = beryl_call(args[2], NULL, 0, true);
+	struct i_val res = beryl_call(args[n_args - 1], NULL, 0, true);
 	if(BERYL_TYPEOF(res) == TYPE_ERR) {
 		err = res;
 		goto ERR;
@@ -253,6 +266,19 @@ static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	return err;
 }
 
+DEF_FN(content_type, -2) {
+	fputs("Content-Type: ", stdout);
+	beryl_print_i_val(stdout, args[0]);
+	
+	for(size_t i = 1; i < n_args; i++) {
+		fputs("; ", stdout);
+		beryl_print_i_val(stdout, args[i]);
+	}
+	
+	fputs("\r\n", stdout);
+	return BERYL_NULL;
+}
+
 DEF_FN(content_type_html, 0) {
 	(void) args, (void) n_args;
 	
@@ -290,6 +316,7 @@ static struct i_val headers_callback(const struct i_val *args, i_size n_args) {
 	
 	void *prev_scope = beryl_new_scope();
 	
+	REQUIRE(beryl_bind_name("content-type", sizeof("content-type") -1, BERYL_EXT_FN(&content_type_fn), true));
 	REQUIRE(beryl_bind_name("content-type-html", sizeof("content-type-html") - 1, BERYL_EXT_FN(&content_type_html_fn), true));
 	REQUIRE(beryl_bind_name("redirect", sizeof("redirect") - 1, BERYL_EXT_FN(&redirect_fn), true));
 	REQUIRE(beryl_bind_name("set-cookie", sizeof("set-cookie") - 1, BERYL_EXT_FN(&set_cookie_fn), true));
