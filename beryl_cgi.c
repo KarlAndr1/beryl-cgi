@@ -235,7 +235,7 @@ static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	
 	REQUIRE(beryl_bind_name("section", sizeof("section") - 1, BERYL_EXT_FN(&section_fn), true));
 	
-	fputs("<html>", stdout);
+	fputs("<!DOCTYPE html>\n<html>", stdout);
 	struct i_val res = beryl_call(args[0], NULL, 0, true);
 	if(BERYL_TYPEOF(res) == TYPE_ERR) {
 		err = res;
