@@ -43,24 +43,8 @@ DEF_FN(div, 1) {
 	return res;
 }
 
-/*
-DEF_FN(p, 1) {
-	(void) n_args;
-	
-	fputs("<p>", stdout);
-	struct i_val res;
-	if(BERYL_TYPEOF(args[0]) == TYPE_STR) {
-		beryl_print_i_val(stdout, args[0]);
-		res = BERYL_NULL;
-	} else {
-		res = beryl_call(args[0], NULL, 0, true);
-	}
-	
-	if(BERYL_TYPEOF(res) == TYPE_ERR)
-		return res;
-	fputs("</p>", stdout);
-	return res;
-} */
+SIMPLE_HTML_BLOCK(section, "section")
+
 SIMPLE_HTML_BLOCK(p, "p")
 
 DEF_FN(link, 2) {
@@ -249,6 +233,7 @@ static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	
 	REQUIRE(beryl_bind_name("body", sizeof("body") - 1, BERYL_EXT_FN(&body_fn), true));
 	
+	REQUIRE(beryl_bind_name("section", sizeof("section") - 1, BERYL_EXT_FN(&section_fn), true));
 	
 	fputs("<html>", stdout);
 	struct i_val res = beryl_call(args[0], NULL, 0, true);
