@@ -517,6 +517,81 @@ static struct i_val parse_url_parameters_callback(const struct i_val *args, i_si
 		return BERYL_ERR("Expected string or null as argument for 'parse-url-parameters'");
 }
 
+static char *sp_write(char *p, const char *str, const char *end) {
+	size_t len = strlen(str);
+	assert(end >= p);
+	assert((size_t) (end - p) >= len);
+	memcpy(p, str, len);
+	return p + len;
+}
+
+static struct i_val sanitize_html_callback(const struct i_val *args, i_size n_args) {
+	(void) n_args;
+	
+	if(BERYL_TYPEOF(args[0]) != TYPE_STR) {
+		beryl_blame_arg(args[0]);
+		return BERYL_ERR("Can only santiize strings, got '%0'");
+	}
+	
+	size_t len = BERYL_LENOF(args[0]);
+	
+	#define MAX_ESCAPE_LEN 6
+	char *buff = beryl_talloc(len * MAX_ESCAPE_LEN);
+	char *b_end = buff + (len * MAX_ESCAPE_LEN);
+	#undef MAX_ESCAPE_LEN
+	
+	if(buff == NULL)
+		return BERYL_ERR("Out of memory");
+	
+	char *p = buff;
+	const char *src = beryl_get_raw_str(&args[0]);
+	bool modified = false;
+	
+	for(size_t i = 0; i < len; i++) { // https://stackoverflow.com/questions/7381974/which-characters-need-to-be-escaped-in-html
+		switch(*src) {
+			case '<':
+				p = sp_write(p, "&lt;", b_end);
+				modified = true;
+				break;
+			case '>':
+				p = sp_write(p, "&gt;", b_end);
+				modified = true;
+				break;
+			case '&':
+				p = sp_write(p, "&amp;", b_end);
+				modified = true;
+				break;
+			
+			case '"':
+				p = sp_write(p, "&quot;", b_end);
+				modified = true;
+				break;
+			case '\'':
+				p = sp_write(p, "&#39;", b_end);
+				modified = true;
+				break;
+			
+			default:
+				*(p++) = *src;
+				break;
+		}
+		src++;
+	}
+	
+	if(!modified) {
+		beryl_tfree(buff);
+		return beryl_retain(args[0]);
+	}
+	
+	struct i_val res = beryl_new_string(p - buff, buff);
+	beryl_tfree(buff);
+	
+	if(BERYL_TYPEOF(res) == TYPE_NULL)
+		return BERYL_ERR("Out of memory");
+	
+	return res;
+}
+
 static bool loaded = false;
 
 static struct i_val lib_val;
@@ -531,7 +606,8 @@ static void init_lib() {
 		FN("html", 1, html_callback),
 		FN("headers", 1, headers_callback),
 		FN("parse-cookies", 1, parse_cookies_callback),
-		FN("parse-url-parameters", 1, parse_url_parameters_callback)
+		FN("parse-url-parameters", 1, parse_url_parameters_callback),
+		FN("sanitize-html", 1, sanitize_html_callback)
 	};
 	
 	struct i_val table = beryl_new_table(LENOF(fns), true);
