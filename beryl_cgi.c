@@ -212,6 +212,100 @@ DEF_FN(form, -4) {
 	return err;
 }
 
+static const char* get_escaped_char(char c) {
+	switch(c) {
+		case '<':
+			return "&lt;";
+		case '>':
+			return "&gt;";
+		case '&':
+			return "&amp;";
+
+		case '"':
+			return "&quot;";
+		case '\'':
+			return "&#39;";
+		
+		default:
+			return NULL;
+	}
+}
+
+static void print_sanitized(FILE *f, struct i_val val) {
+	switch(BERYL_TYPEOF(val)) {
+		case TYPE_STR: {
+			const char *str = beryl_get_raw_str(&val);
+			i_size len = BERYL_LENOF(val);
+			const char *end = str + len;
+			const char *prev = NULL;
+			while(str < end) {
+				const char* escaped = get_escaped_char(*str);
+				if(escaped != NULL) {
+					fputs(escaped, f);
+					if(prev != NULL) {
+						fwrite(prev, sizeof(char), str - prev, f);
+						prev = NULL;
+					}
+				} else if(prev == NULL)
+					prev = str;
+				str++;
+			}
+			if(prev != NULL)
+				fwrite(prev, sizeof(char), end - prev, f);
+		} break;
+		
+		case TYPE_NULL:
+			fputs("Null", f);
+			break;
+		
+		default:
+			fputs("Other", f);
+			break;
+	}	
+}
+
+DEF_FN(template, -2) {
+	if(BERYL_TYPEOF(args[0]) != TYPE_STR) {
+		beryl_blame_arg(args[0]);
+		return BERYL_ERR("'Template' only accepts strings as first argument, got '%0'");
+	}
+	
+	i_size len = BERYL_LENOF(args[0]);
+	const char *fstr = beryl_get_raw_str(&args[0]);
+	const char *prev = NULL;
+	const char *end = fstr + len;
+	
+	while(fstr < end) {
+		if(*fstr == '%') {
+			if(prev != NULL) {
+				fwrite(prev, sizeof(char), fstr - prev, stdout);
+				prev = NULL;
+			}
+			fstr++;
+			if(fstr != end) {
+				char digit = *fstr;
+				fstr++;
+			
+				if(digit >= '0' && digit <= '9') {
+					unsigned n = (digit - '0') + 1;
+					if(n < n_args)
+						print_sanitized(stdout, args[n]);
+				}
+			}
+		} else {
+			if(prev == NULL)
+				prev = fstr;
+			fstr++;
+		}
+		
+	}
+	
+	if(prev != NULL)
+		fwrite(prev, sizeof(char), end - prev, stdout);
+	
+	return BERYL_NULL;
+}
+
 static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	(void) n_args;
 	
@@ -219,6 +313,7 @@ static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	
 	void *prev_scope = beryl_new_scope();
 	
+	REQUIRE(beryl_bind_name("template", sizeof("template") - 1, BERYL_EXT_FN(&template_fn), true));
 	REQUIRE(beryl_bind_name("div", sizeof("div") - 1, BERYL_EXT_FN(&div_fn), true));
 	REQUIRE(beryl_bind_name("p", sizeof("p") - 1, BERYL_EXT_FN(&p_fn), true));
 	REQUIRE(beryl_bind_name("link", sizeof("link") -1, BERYL_EXT_FN(&link_fn), true));
