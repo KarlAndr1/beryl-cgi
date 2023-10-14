@@ -220,7 +220,10 @@ static const char* get_escaped_char(char c) {
 			return "&gt;";
 		case '&':
 			return "&amp;";
-
+		
+		case '\n':
+			return "<br/>";
+		
 		case '"':
 			return "&quot;";
 		case '\'':
