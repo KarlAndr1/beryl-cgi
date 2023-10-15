@@ -60,8 +60,10 @@ static void print_sanitized(FILE *f, struct i_val val) {
 				fwrite(prev, sizeof(char), end - prev, f);
 		} break;
 		
+		case TYPE_NUMBER:
+		case TYPE_BOOL:
 		case TYPE_NULL:
-			fputs("Null", f);
+			beryl_print_i_val(f, val);
 			break;
 		
 		default:
