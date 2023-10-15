@@ -15,205 +15,6 @@ static struct i_val name##_callback(const struct i_val *args, i_size n_args); \
 static struct beryl_external_fn name##_fn = FN(#name, arity, name##_callback); \
 static struct i_val name##_callback(const struct i_val *args, i_size n_args)
 
-#define SIMPLE_HTML_BLOCK(name, block_name) DEF_FN(name, 1) { \
-	(void) n_args; \
-	fputs("<" block_name ">", stdout); \
-	struct i_val res; \
-	if(BERYL_TYPEOF(args[0]) == TYPE_STR) { \
-		beryl_print_i_val(stdout, args[0]); \
-		res = BERYL_NULL; \
-	} else { \
-		res = beryl_call(args[0], NULL, 0, true); \
-	} \
-	\
-	if(BERYL_TYPEOF(res) == TYPE_ERR) \
-		return res; \
-	fputs("</" block_name ">", stdout); \
-	return res; \
-}
-
-DEF_FN(div, 1) {
-	(void) n_args;
-	
-	fputs("<div>", stdout);
-	struct i_val res = beryl_call(args[0], NULL, 0, true);
-	if(BERYL_TYPEOF(res) == TYPE_ERR)
-		return res;
-	fputs("</div>", stdout);
-	return res;
-}
-
-SIMPLE_HTML_BLOCK(section, "section")
-
-SIMPLE_HTML_BLOCK(p, "p")
-
-SIMPLE_HTML_BLOCK(title, "title")
-
-DEF_FN(link, 2) {
-	(void) n_args;
-	fputs("<a href=\"", stdout);
-	beryl_print_i_val(stdout, args[1]);
-	fputs("\">", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	fputs("</a>", stdout);
-	return BERYL_NULL;
-}
-
-
-DEF_FN(h, 2) {
-	(void) n_args;
-	fputs("<h", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	putc('>', stdout);
-	
-	struct i_val res;
-	if(BERYL_TYPEOF(args[1]) == TYPE_STR) {
-		beryl_print_i_val(stdout, args[1]);
-		res = BERYL_NULL;
-	} else {
-		res = beryl_call(args[1], NULL, 0, true);
-	}
-
-	if(BERYL_TYPEOF(res) != TYPE_ERR) {
-		fputs("</h", stdout);
-		beryl_print_i_val(stdout, args[0]);
-		putc('>', stdout);
-	}
-	
-	return res;
-}
-//SIMPLE_HTML_BLOCK(h, "h")
-
-SIMPLE_HTML_BLOCK(html_table, "table")
-SIMPLE_HTML_BLOCK(tr, "tr")
-SIMPLE_HTML_BLOCK(th, "th")
-SIMPLE_HTML_BLOCK(td, "td")
-
-SIMPLE_HTML_BLOCK(body, "body")
-
-DEF_FN(input, 3) {
-	(void) n_args;
-	fputs("<input type=\"", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	fputs("\" id=\"", stdout);
-	beryl_print_i_val(stdout, args[1]);
-	fputs("\" name=\"", stdout);
-	beryl_print_i_val(stdout, args[2]);
-	fputs("\"/>", stdout);
-	
-	return BERYL_NULL;
-}
-
-DEF_FN(label, 2) {
-	(void) n_args;
-	struct i_val res;
-	
-	fputs("<label for=\"", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	fputs("\">", stdout);
-	
-	if(BERYL_TYPEOF(args[1]) == TYPE_STR) { 
-		beryl_print_i_val(stdout, args[1]);
-		res = BERYL_NULL;
-	} else {
-		res = beryl_call(args[1], NULL, 0, true);
-	}
-	
-	if(BERYL_TYPEOF(res) != TYPE_ERR)
-		fputs("</label>", stdout);
-	
-	return res;
-}
-
-DEF_FN(select, 3) {
-	(void) n_args;
-	if(BERYL_TYPEOF(args[2]) != TYPE_ARRAY) {
-		beryl_blame_arg(args[2]);
-		return BERYL_ERR("Expected array as third argument for 'select', got '%0'");
-	}
-	
-	fputs("<select name=\"", stdout);
-	beryl_print_i_val(stdout, args[1]);
-	fputs("\" id=\"", stdout);
-	beryl_print_i_val(stdout, args[1]);
-	fputs("\">", stdout);
-	
-	i_size len = BERYL_LENOF(args[2]);
-	const struct i_val *a = beryl_get_raw_array(args[2]);
-	
-	for(i_size i = 0; i < len; i++) {
-		fputs("<option value=\"", stdout);
-		if(BERYL_TYPEOF(a[i]) == TYPE_ARRAY && BERYL_LENOF(a[i]) == 2) {
-			const struct i_val *items = beryl_get_raw_array(a[i]);
-			beryl_print_i_val(stdout, items[0]);
-			fputs("\">", stdout);
-			beryl_print_i_val(stdout, items[1]);
-		} else {
-			beryl_print_i_val(stdout, a[i]);
-			fputs("\">", stdout);
-			beryl_print_i_val(stdout, a[i]);
-		}
-		fputs("</option>", stdout);
-	}
-	
-	fputs("</select>", stdout);
-	
-	return BERYL_NULL;
-}
-
-DEF_FN(submit, 1) {
-	(void) n_args;
-	fputs("<input type=\"submit\" value=\"", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	fputs("\"/>", stdout);
-	
-	return BERYL_NULL;
-}
-
-DEF_FN(form, -4) {
-	if(n_args % 2 != 1)
-		return BERYL_ERR("'form' only takes an odd number of arguments");
-	
-	(void) n_args;
-	fputs("<form action=\"", stdout);
-	beryl_print_i_val(stdout, args[0]);
-	fputs("\" method=\"", stdout);
-	beryl_print_i_val(stdout, args[1]);
-	fputs("\" ", stdout);
-	
-	for(i_size i = 2; i < n_args - 1; i += 2) {
-		beryl_print_i_val(stdout, args[i]);
-		fputs("=\"", stdout);
-		assert(i + 1 < n_args - 1);
-		beryl_print_i_val(stdout, args[i+1]);
-		fputs("\" ", stdout);
-	}
-	
-	fputs(">", stdout);
-	
-	struct i_val err;
-	void *prev_scope = beryl_new_scope();
-	
-	REQUIRE(beryl_bind_name("input", sizeof("input") - 1, BERYL_EXT_FN(&input_fn), true));
-	REQUIRE(beryl_bind_name("label", sizeof("label") - 1, BERYL_EXT_FN(&label_fn), true));
-	REQUIRE(beryl_bind_name("select", sizeof("select") - 1, BERYL_EXT_FN(&select_fn), true));
-	REQUIRE(beryl_bind_name("submit", sizeof("submit") - 1, BERYL_EXT_FN(&submit_fn), true));
-	
-	struct i_val res = beryl_call(args[n_args - 1], NULL, 0, true);
-	if(BERYL_TYPEOF(res) == TYPE_ERR) {
-		err = res;
-		goto ERR;
-	}
-	
-	fputs("</form>", stdout);
-	beryl_restore_scope(prev_scope);
-	return res;
-	
-	ERR:
-	beryl_restore_scope(prev_scope);
-	return err;
-}
-
 static const char* get_escaped_char(char c) {
 	switch(c) {
 		case '<':
@@ -267,6 +68,205 @@ static void print_sanitized(FILE *f, struct i_val val) {
 			fputs("Other", f);
 			break;
 	}	
+}
+
+#define SIMPLE_HTML_BLOCK(name, block_name) DEF_FN(name, 1) { \
+	(void) n_args; \
+	fputs("<" block_name ">", stdout); \
+	struct i_val res; \
+	if(BERYL_TYPEOF(args[0]) == TYPE_STR) { \
+		print_sanitized(stdout, args[0]); \
+		res = BERYL_NULL; \
+	} else { \
+		res = beryl_call(args[0], NULL, 0, true); \
+	} \
+	\
+	if(BERYL_TYPEOF(res) == TYPE_ERR) \
+		return res; \
+	fputs("</" block_name ">", stdout); \
+	return res; \
+}
+
+DEF_FN(div, 1) {
+	(void) n_args;
+	
+	fputs("<div>", stdout);
+	struct i_val res = beryl_call(args[0], NULL, 0, true);
+	if(BERYL_TYPEOF(res) == TYPE_ERR)
+		return res;
+	fputs("</div>", stdout);
+	return res;
+}
+
+SIMPLE_HTML_BLOCK(section, "section")
+
+SIMPLE_HTML_BLOCK(p, "p")
+
+SIMPLE_HTML_BLOCK(title, "title")
+
+DEF_FN(link, 2) {
+	(void) n_args;
+	fputs("<a href=\"", stdout);
+	print_sanitized(stdout, args[1]);
+	fputs("\">", stdout);
+	print_sanitized(stdout, args[0]);
+	fputs("</a>", stdout);
+	return BERYL_NULL;
+}
+
+
+DEF_FN(h, 2) {
+	(void) n_args;
+	fputs("<h", stdout);
+	print_sanitized(stdout, args[0]);
+	putc('>', stdout);
+	
+	struct i_val res;
+	if(BERYL_TYPEOF(args[1]) == TYPE_STR) {
+		print_sanitized(stdout, args[1]);
+		res = BERYL_NULL;
+	} else {
+		res = beryl_call(args[1], NULL, 0, true);
+	}
+
+	if(BERYL_TYPEOF(res) != TYPE_ERR) {
+		fputs("</h", stdout);
+		print_sanitized(stdout, args[0]);
+		putc('>', stdout);
+	}
+	
+	return res;
+}
+//SIMPLE_HTML_BLOCK(h, "h")
+
+SIMPLE_HTML_BLOCK(html_table, "table")
+SIMPLE_HTML_BLOCK(tr, "tr")
+SIMPLE_HTML_BLOCK(th, "th")
+SIMPLE_HTML_BLOCK(td, "td")
+
+SIMPLE_HTML_BLOCK(body, "body")
+
+DEF_FN(input, 3) {
+	(void) n_args;
+	fputs("<input type=\"", stdout);
+	print_sanitized(stdout, args[0]);
+	fputs("\" id=\"", stdout);
+	print_sanitized(stdout, args[1]);
+	fputs("\" name=\"", stdout);
+	print_sanitized(stdout, args[2]);
+	fputs("\"/>", stdout);
+	
+	return BERYL_NULL;
+}
+
+DEF_FN(label, 2) {
+	(void) n_args;
+	struct i_val res;
+	
+	fputs("<label for=\"", stdout);
+	print_sanitized(stdout, args[0]);
+	fputs("\">", stdout);
+	
+	if(BERYL_TYPEOF(args[1]) == TYPE_STR) { 
+		print_sanitized(stdout, args[1]);
+		res = BERYL_NULL;
+	} else {
+		res = beryl_call(args[1], NULL, 0, true);
+	}
+	
+	if(BERYL_TYPEOF(res) != TYPE_ERR)
+		fputs("</label>", stdout);
+	
+	return res;
+}
+
+DEF_FN(select, 3) {
+	(void) n_args;
+	if(BERYL_TYPEOF(args[2]) != TYPE_ARRAY) {
+		beryl_blame_arg(args[2]);
+		return BERYL_ERR("Expected array as third argument for 'select', got '%0'");
+	}
+	
+	fputs("<select name=\"", stdout);
+	print_sanitized(stdout, args[1]);
+	fputs("\" id=\"", stdout);
+	print_sanitized(stdout, args[1]);
+	fputs("\">", stdout);
+	
+	i_size len = BERYL_LENOF(args[2]);
+	const struct i_val *a = beryl_get_raw_array(args[2]);
+	
+	for(i_size i = 0; i < len; i++) {
+		fputs("<option value=\"", stdout);
+		if(BERYL_TYPEOF(a[i]) == TYPE_ARRAY && BERYL_LENOF(a[i]) == 2) {
+			const struct i_val *items = beryl_get_raw_array(a[i]);
+			print_sanitized(stdout, items[0]);
+			fputs("\">", stdout);
+			print_sanitized(stdout, items[1]);
+		} else {
+			print_sanitized(stdout, a[i]);
+			fputs("\">", stdout);
+			print_sanitized(stdout, a[i]);
+		}
+		fputs("</option>", stdout);
+	}
+	
+	fputs("</select>", stdout);
+	
+	return BERYL_NULL;
+}
+
+DEF_FN(submit, 1) {
+	(void) n_args;
+	fputs("<input type=\"submit\" value=\"", stdout);
+	print_sanitized(stdout, args[0]);
+	fputs("\"/>", stdout);
+	
+	return BERYL_NULL;
+}
+
+DEF_FN(form, -4) {
+	if(n_args % 2 != 1)
+		return BERYL_ERR("'form' only takes an odd number of arguments");
+	
+	(void) n_args;
+	fputs("<form action=\"", stdout);
+	print_sanitized(stdout, args[0]);
+	fputs("\" method=\"", stdout);
+	print_sanitized(stdout, args[1]);
+	fputs("\" ", stdout);
+	
+	for(i_size i = 2; i < n_args - 1; i += 2) {
+		print_sanitized(stdout, args[i]);
+		fputs("=\"", stdout);
+		assert(i + 1 < n_args - 1);
+		print_sanitized(stdout, args[i+1]);
+		fputs("\" ", stdout);
+	}
+	
+	fputs(">", stdout);
+	
+	struct i_val err;
+	void *prev_scope = beryl_new_scope();
+	
+	REQUIRE(beryl_bind_name("input", sizeof("input") - 1, BERYL_EXT_FN(&input_fn), true));
+	REQUIRE(beryl_bind_name("label", sizeof("label") - 1, BERYL_EXT_FN(&label_fn), true));
+	REQUIRE(beryl_bind_name("select", sizeof("select") - 1, BERYL_EXT_FN(&select_fn), true));
+	REQUIRE(beryl_bind_name("submit", sizeof("submit") - 1, BERYL_EXT_FN(&submit_fn), true));
+	
+	struct i_val res = beryl_call(args[n_args - 1], NULL, 0, true);
+	if(BERYL_TYPEOF(res) == TYPE_ERR) {
+		err = res;
+		goto ERR;
+	}
+	
+	fputs("</form>", stdout);
+	beryl_restore_scope(prev_scope);
+	return res;
+	
+	ERR:
+	beryl_restore_scope(prev_scope);
+	return err;
 }
 
 DEF_FN(template, -2) {
