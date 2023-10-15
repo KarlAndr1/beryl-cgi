@@ -485,6 +485,13 @@ static struct i_val escape_param_string(const char *str, const char *strend) {
 }
 
 static struct i_val parse_param_string(const char *str, size_t len, char param_delimiter, char key_val_delimiter, bool skip_spaces) {
+	if(len == 0) {
+		struct i_val res = beryl_new_table(0, false);
+		if(BERYL_TYPEOF(res) == TYPE_NULL)
+			return BERYL_ERR("Out of memory");
+		return res;
+	}
+	
 	size_t delim_count = 0, param_count = 0;
 	bool spaces_only = true;
 	for(size_t i = 0; i < len; i++) { 
