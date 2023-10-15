@@ -47,6 +47,8 @@ SIMPLE_HTML_BLOCK(section, "section")
 
 SIMPLE_HTML_BLOCK(p, "p")
 
+SIMPLE_HTML_BLOCK(title, "title")
+
 DEF_FN(link, 2) {
 	(void) n_args;
 	fputs("<a href=\"", stdout);
@@ -321,6 +323,7 @@ static struct i_val html_callback(const struct i_val *args, i_size n_args) {
 	REQUIRE(beryl_bind_name("p", sizeof("p") - 1, BERYL_EXT_FN(&p_fn), true));
 	REQUIRE(beryl_bind_name("link", sizeof("link") -1, BERYL_EXT_FN(&link_fn), true));
 	REQUIRE(beryl_bind_name("h", sizeof("h") - 1, BERYL_EXT_FN(&h_fn), true));
+	REQUIRE(beryl_bind_name("title", sizeof("title") - 1, BERYL_EXT_FN(&title_fn), true));
 	
 	REQUIRE(beryl_bind_name("html-table", sizeof("html-table") - 1, BERYL_EXT_FN(&html_table_fn), true));
 	REQUIRE(beryl_bind_name("tr", sizeof("tr") - 1, BERYL_EXT_FN(&tr_fn), true));
