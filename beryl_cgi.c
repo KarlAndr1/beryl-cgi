@@ -47,11 +47,11 @@ static void print_sanitized(FILE *f, struct i_val val) {
 			while(str < end) {
 				const char* escaped = get_escaped_char(*str);
 				if(escaped != NULL) {
-					fputs(escaped, f);
 					if(prev != NULL) {
 						fwrite(prev, sizeof(char), str - prev, f);
 						prev = NULL;
 					}
+					fputs(escaped, f);
 				} else if(prev == NULL)
 					prev = str;
 				str++;
